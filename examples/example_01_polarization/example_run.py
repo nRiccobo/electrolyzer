@@ -10,13 +10,17 @@ from electrolyzer import Stack, electrolyzer_model
 n_cells = 100  # number of cells in stack
 cell_area = 1000  # cell area, cm^2
 temperature = 60  # temperature
-max_current = 2000
+max_current = 10000
 
 stack_dict = {
     "n_cells": n_cells,
     "cell_area": cell_area,
     "temperature": temperature,
     "max_current": max_current,
+    "anode_pressure": 101325, 
+    "cathode_pressure": 101325, 
+    "membrane_thickness": 0.03, 
+    "dt": 1.0
 }
 
 elec = Stack.from_dict(stack_dict)
@@ -49,4 +53,9 @@ plt.grid(True)
 plt.xlabel("Current density (A/cm^2)")
 plt.ylabel("Voltage (V)")
 plt.title("Polarization Curve")
+plt.show()
+
+plt.figure()
+plt.plot(p_actual, cur)
+plt.grid(True)
 plt.show()

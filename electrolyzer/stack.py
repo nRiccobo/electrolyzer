@@ -20,6 +20,11 @@ class Stack(FromDictMixin):
     n_cells: int
     dt: float
 
+    # new 
+    anode_pressure: float
+    cathode_pressure: float
+    membrane_thickness: float 
+
     min_power: float = None
     stack_rating_kW: float = None
 
@@ -118,12 +123,16 @@ class Stack(FromDictMixin):
     # whether 1st order dynamics should be ignored according to dt size
     ignore_dynamics: bool = field(init=False, default=False)
 
+
     def __attrs_post_init__(self) -> None:
         # Stack parameters #
         ####################
 
         # TODO: let's make this more seamless
-        self.cell = Cell.from_dict({"cell_area": self.cell_area})
+        self.cell = Cell.from_dict({"cell_area": self.cell_area,
+                                    "anode_pressure": self.anode_pressure,
+                                    "cathode_pressure": self.cathode_pressure,
+                                    "membrane_thickness": self.membrane_thickness})
 
         self.fit_params = self.create_polarization()
 
@@ -175,7 +184,7 @@ class Stack(FromDictMixin):
         I = electrolyzer_model((P_in / 1e3, self.temperature), *self.fit_params)
         V = self.cell.calc_cell_voltage(I, self.temperature)
 
-        if self.stack_on:
+        if self.stack_on: # must force to True to work with sensitivity analysis
             power_left = P_in
 
             self.I = I

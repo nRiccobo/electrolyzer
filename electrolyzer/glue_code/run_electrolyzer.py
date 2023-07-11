@@ -24,6 +24,7 @@ def _run_electrolyzer_full(modeling_options, power_signal):
     cycles = np.zeros((elec_sys.n_stacks, len(power_signal)))
     uptime = np.zeros((elec_sys.n_stacks, len(power_signal)))
     current_density = np.zeros((elec_sys.n_stacks, len(power_signal)))
+    voltage = np.zeros((elec_sys.n_stacks, len(power_signal)))
     p_in = []
 
     # Run electrolyzer simulation
@@ -46,11 +47,13 @@ def _run_electrolyzer_full(modeling_options, power_signal):
             cycles[j, i] = stack.cycle_count
             uptime[j, i] = stack.uptime
             current_density[j, i] = stack.I / stack.cell.cell_area
+            voltage[j,i] = stack.cell_voltage
 
     # Collect results into a DataFrame
     results_df = pd.DataFrame(
         {
             "power_signal": power_signal,
+            "power_left" : loop_power_left,
             "curtailment": curtailment,
             "kg_rate": tot_kg,
         }
@@ -69,6 +72,7 @@ def _run_electrolyzer_full(modeling_options, power_signal):
                 f"stack_{id}_uptime": uptime[i, :],
                 f"stack_{id}_kg_rate": kg_rate[i, :],
                 f"stack_{id}_curr_density": current_density[i, :],
+                f"stack_{id}_voltage" : voltage[i,:]
             }
         )
         stack_dfs.append(stack_df)

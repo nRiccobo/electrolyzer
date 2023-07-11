@@ -29,8 +29,8 @@ def electrolyzer_model(X, a, b, c, d, e, f):
 # Constants #
 #############
 F, _, _ = physical_constants["Faraday constant"]  # Faraday's constant [C/mol]
-P_ATMO, _, _ = physical_constants["standard atmosphere"]  # Pa
-
+P_ATMO, _, _ = physical_constants["standard atmosphere"]  # [Pa]
+Ru, _, _ = physical_constants["molar gas constant"] # Universal Gas Constant [J / molK]
 
 @define
 class Cell(FromDictMixin):
@@ -46,9 +46,15 @@ class Cell(FromDictMixin):
     n: int = 2
 
     gibbs: float = 237.24e3  # Gibbs Energy of global reaction (J/mol)
-    M: float = 2.016  # molecular weight [g/mol]
+    M: float = 2.016  # molecular weight of Hydrogen gas [g/mol]
     lhv: float = 33.33  # lower heating value of H2 [kWh/kg]
     hhv: float = 39.41  # higher heating value of H2 [kWh/kg]
+
+    MH2O: float = 18.015 # Molecular weight of Water [g/mol]
+
+    anode_pressure: float = P_ATMO
+    cathode_pressure: float = P_ATMO
+    membrane_thickness: float = 0.03
 
     def calc_reversible_voltage(self):
         """
@@ -60,8 +66,8 @@ class Cell(FromDictMixin):
         """Calculates open circuit voltage using the Nernst equation."""
         T_K = convert_temperature([temperature], "C", "K")[0]
         E_rev_0 = self.calc_reversible_voltage()
-        p_anode = P_ATMO  # (Pa) assumed atmo
-        p_cathode = P_ATMO
+        p_anode = self.anode_pressure # P_ATMO  # (Pa) assumed atmo
+        p_cathode = self.cathode_pressure # 7.5e6 # P_ATMO
 
         # noqa: E501
         # Arden Buck equation T=C, https://www.omnicalculator.com/chemistry/vapour-pressure-of-water#vapor-pressure-formulas # noqa
@@ -138,7 +144,7 @@ class Cell(FromDictMixin):
         # pulled from https://www.sciencedirect.com/science/article/pii/S0360319917309278?via%3Dihub # noqa
         # TODO: pulled from empirical data, is there a better eq?
         lambda_nafion = ((-2.89556 + (0.016 * T_K)) + 1.625) / 0.1875
-        t_nafion = 0.03  # (cm) TODO: confirm actual thickness?
+        t_nafion = self.membrane_thickness # 0.03  # (cm) TODO: confirm actual thickness?
 
         # TODO: confirm with Nel, is there a better eq?
         sigma_nafion = ((0.005139 * lambda_nafion) - 0.00326) * np.exp(
@@ -209,6 +215,24 @@ class Cell(FromDictMixin):
 
         return V_cell
 
+    # ------------------------------------------------------------
+    # H2O production
+    # ------------------------------------------------------------
+    
+    def calc_water_transport(self, T, i):
+        '''
+        Reference: Mathematical modeling and dynamic Simulink simulation of high-pressure PEM 
+        electrolyzer system. Yigit and Selamet-2016
+        '''
+        # electro-osmotic drag coefficient
+        eta_d = 0.016 * T - 2.89556 
+
+        n_dot_eod = eta_d * i * self.MH2O * self.cell_area / F
+        n_dot_diff = 0
+
+        n_dot = n_dot_diff + n_dot_eod
+        return n_dot
+    
     # ------------------------------------------------------------
     # Post H2 production
     # ------------------------------------------------------------
